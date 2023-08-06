@@ -15,7 +15,7 @@
             this.line = line;
         }
 
-        public string toString()
+        public override string ToString()
         {
             return String.Format("{0} {1} {2}", type, lexeme, literal);
         }

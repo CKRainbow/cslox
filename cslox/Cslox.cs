@@ -16,38 +16,38 @@ namespace cslox
             }
             else if (args.Length == 1)
             {
-                runFile(args[0]);
+                RunFile(args[0]);
             }
             else
             {
-                runPrompt();
+                RunPrompt();
             }
         }
 
-        private static void runFile(string path)
+        private static void RunFile(string path)
         {
             byte[] bytes = File.ReadAllBytes(path);
-            run(Encoding.UTF8.GetString(bytes));
+            Run(Encoding.UTF8.GetString(bytes));
             // stop processing immediately
             if (hasError)
                 return;
         }
 
-        private static void runPrompt()
+        private static void RunPrompt()
         {
 
             while (true)
             {
-                Console.WriteLine("> ");
+                Console.Write("> ");
                 string? line = Console.ReadLine();
                 if (line == null)
                     break;
-                run(line);
+                Run(line);
                 hasError = false; // do not stop even there is error;
             }
         }
 
-        private static void run(string source)
+        private static void Run(string source)
         {
             Scanner scanner = new Scanner(source);
             List<Token> tokens = scanner.scanTokens();
@@ -58,12 +58,12 @@ namespace cslox
             }
         }
 
-        internal static void error(int line, string message)
+        internal static void Error(int line, string message)
         {
-            report(line, "", message);
+            Report(line, "", message);
         }
 
-        private static void report(int line, string where, string message)
+        private static void Report(int line, string where, string message)
         {
             Console.Error.WriteLine("[line {0}] Error{1}: {2}.", line, where, message);
             hasError = true;

@@ -1,13 +1,39 @@
-﻿namespace cslox
+﻿using System.Collections;
+
+namespace cslox
 {
     internal class Scanner
     {
         readonly string source;
-        readonly List<Token> tokens = new List<Token>();
+        readonly List<Token> tokens = new ();
+
+        static readonly Dictionary<string, TokenType> keywords = new ();
+
+        static Scanner()
+        {
+            keywords.Add("and", TokenType.AND);
+            keywords.Add("or", TokenType.OR);
+            keywords.Add("class", TokenType.CLASS);
+            keywords.Add("else", TokenType.ELSE);
+            keywords.Add("false", TokenType.FALSE);
+            keywords.Add("for", TokenType.FOR);
+            keywords.Add("fun", TokenType.FUN);
+            keywords.Add("if", TokenType.IF);
+            keywords.Add("nil", TokenType.NIL);
+            keywords.Add("print", TokenType.PRINT);
+            keywords.Add("return", TokenType.RETURN);
+            keywords.Add("super", TokenType.SUPER);
+            keywords.Add("this", TokenType.THIS);
+            keywords.Add("true", TokenType.TRUE);
+            keywords.Add("var", TokenType.VAR);
+            keywords.Add("while", TokenType.WHILE);
+        }
 
         int start = 0;
         int current = 0;
         int line = 1;
+
+        int commentNum = 0;
 
         internal Scanner(string source)
         {
@@ -16,80 +42,86 @@
 
         internal List<Token> scanTokens()
         {
-            while (!isAtEnd())
+            while (!IsAtEnd())
             {
                 start = current;
-                scanToken();
+                ScanToken();
             }
 
             tokens.Add(new Token(TokenType.EOF, "", null, line));
             return tokens;
         }
 
-        bool isAtEnd()
+        bool IsAtEnd()
         {
             return current >= source.Length;
         }
 
-        void scanToken()
+        void ScanToken()
         {
-            char c = advance();
+            char c = Advance();
             switch (c)
             {
+                //characters
                 case '(':
-                    addToken(TokenType.LEFT_PAREN);
+                    AddToken(TokenType.LEFT_PAREN);
                     break;
                 case ')':
-                    addToken(TokenType.RIGHT_PAREN);
+                    AddToken(TokenType.RIGHT_PAREN);
                     break;
                 case '{':
-                    addToken(TokenType.LEFT_BRACE);
+                    AddToken(TokenType.LEFT_BRACE);
                     break;
                 case '}':
-                    addToken(TokenType.RIGHT_BRACE);
+                    AddToken(TokenType.RIGHT_BRACE);
                     break;
                 case ',':
-                    addToken(TokenType.COMMA);
+                    AddToken(TokenType.COMMA);
                     break;
                 case '.':
-                    addToken(TokenType.DOT);
+                    AddToken(TokenType.DOT);
                     break;
                 case '-':
-                    addToken(TokenType.MINUS);
+                    AddToken(TokenType.MINUS);
                     break;
                 case '+':
-                    addToken(TokenType.PLUS);
+                    AddToken(TokenType.PLUS);
                     break;
                 case ';':
-                    addToken(TokenType.SEMICOLON);
+                    AddToken(TokenType.SEMICOLON);
                     break;
                 case '*':
-                    addToken(TokenType.STAR);
+                    AddToken(TokenType.STAR);
                     break;
                 case '!':
-                    addToken(match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
+                    AddToken(Match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
                     break;
                 case '=':
-                    addToken(match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
+                    AddToken(Match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
                     break;
                 case '>':
-                    addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
+                    AddToken(Match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
                     break;
                 case '<':
-                    addToken(match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
+                    AddToken(Match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
                     break;
                 case '/':
-                    if (match('/'))
+                    if (Match('/'))
                     {
                         // a comment goes until a line ends
-                        while (peek() != '\n' && !isAtEnd()) advance();
+                        while (Peek() != '\n' && !IsAtEnd()) Advance(); // use peek() for looking ahead for '\n' to update line
+                    }
+                    else if (Match('*'))
+                    {
+                        MultilineComment();
                     }
                     else
                     {
-                        addToken(TokenType.SLASH);
+                        AddToken(TokenType.SLASH);
                     }
                     break;
 
+                // special characters
                 case ' ':
                 case '\t':
                 case '\r':
@@ -98,42 +130,144 @@
                     line++;
                     break;
 
+                // string
+                case '"':
+                    LiteralString();
+                    break;
+
+                // numbers keywords and identifier
                 default:
-                    Cslox.error(line, "Unexpected character.");
+                    if (IsDigit(c))
+                        LiteralNumber();
+                    else if (IsAlpha(c))
+                        Identifier();
+                    else
+                        Cslox.Error(line, "Unexpected character.");
                     break;
             }
         }
 
-        char advance()
+        char Advance()
         {
             current++;
             return source[current - 1];
         }
 
-        bool match(char expected)
+        bool Match(char expected)
         {
-            if (isAtEnd()) return false;
+            if (IsAtEnd()) return false;
             if (source[current] != expected) return false;
 
             current++;
             return true;
         }
 
-        char peek()
+        char Peek()
         {
-            if (isAtEnd()) return '\0';
+            if (IsAtEnd()) return '\0';
             return source[current];
         }
 
-        void addToken(TokenType type)
+        char PeekNext()
         {
-            addToken(type, null);
+            if (current + 1 >= source.Length) return '\0';
+            return source[current + 1];
         }
 
-        void addToken(TokenType type, object? literal)
+        void AddToken(TokenType type)
         {
-            string text = source.Substring(start, current);
+            AddToken(type, null);
+        }
+
+        void AddToken(TokenType type, object? literal)
+        {
+            string text = source.Substring(start, current - start);
             tokens.Add(new Token(type, text, literal, line));
+        }
+
+        bool IsDigit(char c)
+        {
+            return c >= '0' && c <= '9';
+        }
+
+        bool IsAlpha(char c)
+        {
+            return (c >= 'a' && c <= 'z') ||
+                (c >= 'A' && c <= 'Z') ||
+                (c == '_');
+        }
+
+        bool IsAlphaNumeric(char c)
+        {
+            return IsAlpha(c) || IsDigit(c);
+        }
+
+        void LiteralString() {
+            while(Peek() != '"' && !IsAtEnd())
+            {
+                if (Peek() == '\n') line++;
+                Advance();
+            }
+
+            if (IsAtEnd())
+            {
+                Cslox.Error(line, "Unterminated string.");
+                return;
+            }
+
+            Advance();
+
+            string value = source.Substring(start + 1, current - start - 2);
+            AddToken(TokenType.STRING, value);
+        }
+
+        void LiteralNumber()
+        {
+            while (IsDigit(Peek())) Advance();
+
+            if (Peek() == '.' && IsDigit(PeekNext()))
+            {
+                Advance();
+                while (IsDigit(Peek())) Advance();
+            }
+
+            AddToken(TokenType.NUMBER, float.Parse(source.Substring(start, current - start)));
+        }
+
+        void Identifier()
+        {
+            while (IsAlphaNumeric(Peek())) Advance();
+
+            string text = source.Substring(start, current - start);
+            if (!keywords.TryGetValue(text, out TokenType type))
+                type = TokenType.IDENTIFIER;
+
+            AddToken(type);
+        }
+
+        void MultilineComment()
+        {
+            commentNum++;
+            while(commentNum > 0 && !IsAtEnd())
+            {
+                if (Peek() == '/' && PeekNext() == '*')
+                {
+                    commentNum++;
+                    Advance();
+                    Advance();
+                }
+                else if (Peek() == '*' && PeekNext() == '/')
+                {
+                    commentNum--;
+                    Advance();
+                    Advance();
+                } else
+                {
+                    if (Peek() == '\n')
+                        line++;
+                    Advance();
+                }
+            }
         }
     }
 }
