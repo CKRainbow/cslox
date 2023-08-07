@@ -1,15 +1,18 @@
 {
   "profiles": {
-    "file_test1": {
-      "commandName": "Project",
-      "commandLineArgs": "test1.lox"
-    },
     "prompt": {
       "commandName": "Project"
     },
-    "file_test": {
+    "other main": {
+      "commandName": "Project"
+    },
+    "file test": {
       "commandName": "Project",
       "commandLineArgs": "test.lox"
+    },
+    "file test1": {
+      "commandName": "Project",
+      "commandLineArgs": "test1.lox"
     }
   }
 }

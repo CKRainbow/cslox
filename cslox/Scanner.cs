@@ -1,13 +1,11 @@
-﻿using System.Collections;
-
-namespace cslox
+﻿namespace cslox
 {
     internal class Scanner
     {
         readonly string source;
-        readonly List<Token> tokens = new ();
+        readonly List<Token> tokens = new();
 
-        static readonly Dictionary<string, TokenType> keywords = new ();
+        static readonly Dictionary<string, TokenType> keywords = new();
 
         static Scanner()
         {
@@ -202,8 +200,9 @@ namespace cslox
             return IsAlpha(c) || IsDigit(c);
         }
 
-        void LiteralString() {
-            while(Peek() != '"' && !IsAtEnd())
+        void LiteralString()
+        {
+            while (Peek() != '"' && !IsAtEnd())
             {
                 if (Peek() == '\n') line++;
                 Advance();
@@ -248,7 +247,7 @@ namespace cslox
         void MultilineComment()
         {
             commentNum++;
-            while(commentNum > 0 && !IsAtEnd())
+            while (commentNum > 0 && !IsAtEnd())
             {
                 if (Peek() == '/' && PeekNext() == '*')
                 {
@@ -261,7 +260,8 @@ namespace cslox
                     commentNum--;
                     Advance();
                     Advance();
-                } else
+                }
+                else
                 {
                     if (Peek() == '\n')
                         line++;

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "tools": {
+      "commandName": "Project",
+      "commandLineArgs": "E:\\Projects\\Compiler\\cslox\\cslox"
+    }
+  }
+}
