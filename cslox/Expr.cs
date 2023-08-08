@@ -50,12 +50,12 @@
 
     internal class Literal : Expr
     {
-        internal Literal(object value)
+        internal Literal(object? value)
         {
             this.value = value;
         }
 
-        internal readonly object value;
+        internal readonly object? value;
 
         internal override T Accept<T>(IVisitor<T> visitor)
         {

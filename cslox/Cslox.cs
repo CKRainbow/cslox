@@ -52,15 +52,25 @@ namespace cslox
             Scanner scanner = new Scanner(source);
             List<Token> tokens = scanner.scanTokens();
 
-            foreach (var token in tokens)
-            {
-                Console.WriteLine(token);
-            }
+            Parser parser = new Parser(tokens);
+            Expr? expression = parser.Parse();
+
+            if (hasError) return;
+
+            Console.WriteLine(new AstPrinter().Print(expression));
         }
 
         internal static void Error(int line, string message)
         {
             Report(line, "", message);
+        }
+
+        internal static void Error(Token token, string message)
+        {
+            if (token.type == TokenType.EOF)
+                Report(token.line, " at end", message);
+            else
+                Report(token.line, String.Format(" at '{0}'", token.lexeme), message);
         }
 
         private static void Report(int line, string where, string message)

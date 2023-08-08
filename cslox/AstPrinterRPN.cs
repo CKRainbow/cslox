@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace cslox
 {
-    internal class AstPrinter : IVisitor<string>
+    internal class AstPrinterRPN : IVisitor<string>
     {
         public static void Main(string[] args)
         {
@@ -18,7 +18,7 @@ namespace cslox
                 new Grouping(
                     new Literal(45.67)));
 
-            Console.WriteLine(new AstPrinter().Print(expression));
+            Console.WriteLine(new AstPrinterRPN().Print(expression));
         }
 
         internal string Print(Expr? expr)
@@ -30,13 +30,12 @@ namespace cslox
         string Parenthesize(string name, params Expr[] exprs)
         {
             StringBuilder builder = new StringBuilder();
-            builder.Append('(').Append(name);
             foreach (var expr in exprs)
             {
-                builder.Append(' ');
                 builder.Append(expr.Accept(this));
+                builder.Append(' ');
             }
-            builder.Append(')');
+            builder.Append(name);
 
             return builder.ToString();
         }
