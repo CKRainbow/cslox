@@ -111,7 +111,7 @@
                     }
                     else if (Match('*'))
                     {
-                        MultilineComment();
+                        BlockComment();
                     }
                     else
                     {
@@ -244,12 +244,16 @@
             AddToken(type);
         }
 
-        void MultilineComment()
+        void BlockComment()
         {
             commentNum++;
             while (commentNum > 0 && !IsAtEnd())
             {
-                if (Peek() == '/' && PeekNext() == '*')
+                if (Peek() == '\0')
+                {
+                    Cslox.Error(line, "Unterminated block comment.");
+                }
+                else if (Peek() == '/' && PeekNext() == '*')
                 {
                     commentNum++;
                     Advance();

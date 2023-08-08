@@ -47,7 +47,7 @@ namespace cslox
 
         public string VisitGroupingExpr(Grouping expr)
         {
-            return Parenthesize("group", expr.expr);
+            return expr.Accept(this);
         }
 
         public string VisitLiteralExpr(Literal expr)

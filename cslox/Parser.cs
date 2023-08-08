@@ -32,11 +32,27 @@ namespace cslox
             }
         }
 
+        // expression -> comma
         Expr ExpressionExpr()
         {
-            return EqualityExpr();
+            return CommaExpr();
         }
 
+        Expr CommaExpr()
+        {
+            Expr expr = EqualityExpr();
+            while (Match(TokenType.COMMA))
+            {
+                Token op = Previous();
+                Expr right = EqualityExpr();
+                expr = new Binary(expr, op, right);
+            }
+            return expr;
+        }
+
+        // comma -> equality ( "," equality )*
+
+        // equality -> comarison ( ( "!=" | "==" ) comparison )*
         Expr EqualityExpr()
         {
             Expr expr = ComparisonExpr();
@@ -50,6 +66,7 @@ namespace cslox
             return expr;
         }
 
+        // comarison -> term ( ( ">" | ">=" | "<" | "<=" | ) term )*
         Expr ComparisonExpr()
         {
             Expr expr = TermExpr();
@@ -63,6 +80,7 @@ namespace cslox
             return expr;
         }
 
+        // term -> factor ( ( "+" | "-" ) factor )*
         Expr TermExpr()
         {
             Expr expr = FactorExpr();
@@ -76,6 +94,7 @@ namespace cslox
             return expr;
         }
 
+        // factor -> unary ( ( "*" | "/" ) unary )*
         Expr FactorExpr()
         {
             Expr expr = UnaryExpr();
@@ -89,6 +108,7 @@ namespace cslox
             return expr;
         }
 
+        // unary -> ( "!" | "-" ) unary | primary
         Expr UnaryExpr()
         {
             
@@ -102,6 +122,9 @@ namespace cslox
             return PrimaryExpr();
         }
 
+        // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
+        // error production for left expr missing binary expression
+        // + * / > >= < <= == != ,
         Expr PrimaryExpr()
         {
             if (Match(TokenType.FALSE)) return new Literal(false);
@@ -114,11 +137,43 @@ namespace cslox
             if (Match(TokenType.LEFT_PAREN))
             {
                 Expr expr = ExpressionExpr();
-                Consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");
+                Consume(TokenType.RIGHT_PAREN, "Expect ')' after expression");
                 return new Grouping(expr);
             }
 
-            throw Error(Peek(), "Expect expression.");
+            // error productions
+            if (Match(TokenType.COMMA))
+            {
+                Error(Previous(), "Missing left-hand operand");
+                CommaExpr();
+                return null;
+            }
+            else if (Match(TokenType.BANG_EQUAL,TokenType.EQUAL_EQUAL))
+            {
+                Error(Previous(), "Missing left-hand operand");
+                EqualityExpr();
+                return null;
+            }
+            else if (Match(TokenType.GREATER_EQUAL,TokenType.GREATER,TokenType.LESS_EQUAL,TokenType.LESS))
+            {
+                Error(Previous(), "Missing left-hand operand");
+                ComparisonExpr();
+                return null;
+            }
+            else if (Match(TokenType.PLUS))
+            {
+                Error(Previous(), "Missing left-hand operand");
+                TermExpr();
+                return null;
+            }
+            else if (Match(TokenType.SLASH,TokenType.STAR))
+            {
+                Error(Previous(), "Missing left-hand operand");
+                FactorExpr();
+                return null;
+            }
+
+            throw Error(Peek(), "Expect expression");
         }
 
 
