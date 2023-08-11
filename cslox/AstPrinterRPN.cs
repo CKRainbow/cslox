@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
 namespace cslox
 {
@@ -58,6 +54,11 @@ namespace cslox
         public string VisitUnaryExpr(Unary expr)
         {
             return Parenthesize(expr.op.lexeme, expr.right);
+        }
+
+        string IVisitor<string>.VisitTernaryExpr(Ternary expr)
+        {
+            return Parenthesize("cond", expr.left, expr.mid, expr.right);
         }
     }
 }

@@ -1,16 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace cslox
+﻿namespace cslox
 {
     internal class ParseError : SystemException { }
 
     internal class Parser
     {
-        
+
 
         readonly List<Token> tokens;
         int current = 0;
@@ -38,19 +32,34 @@ namespace cslox
             return CommaExpr();
         }
 
+        // comma -> conditional ( "," conditional )*
         Expr CommaExpr()
         {
-            Expr expr = EqualityExpr();
+            Expr expr = ConditionalExpr();
             while (Match(TokenType.COMMA))
             {
                 Token op = Previous();
-                Expr right = EqualityExpr();
+                Expr right = ConditionalExpr();
                 expr = new Binary(expr, op, right);
             }
             return expr;
         }
 
-        // comma -> equality ( "," equality )*
+        // conditional -> equality ( "?" expression ":" conditional )?
+        Expr ConditionalExpr()
+        {
+            Expr expr = EqualityExpr();
+            if (Match(TokenType.QUESTION))
+            {
+                var op1 = Previous();
+                Expr mid = ExpressionExpr();
+                Consume(TokenType.COLON, "Expect ':' after then branch of conditional expression");
+                var op2 = Previous();
+                Expr right = ConditionalExpr();
+                expr = new Ternary(expr, op1, mid, op2, right);
+            }
+            return expr;
+        }
 
         // equality -> comarison ( ( "!=" | "==" ) comparison )*
         Expr EqualityExpr()
@@ -111,7 +120,7 @@ namespace cslox
         // unary -> ( "!" | "-" ) unary | primary
         Expr UnaryExpr()
         {
-            
+
             if (Match(TokenType.BANG, TokenType.MINUS))
             {
                 Token op = Previous();
@@ -148,13 +157,13 @@ namespace cslox
                 CommaExpr();
                 return null;
             }
-            else if (Match(TokenType.BANG_EQUAL,TokenType.EQUAL_EQUAL))
+            else if (Match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL))
             {
                 Error(Previous(), "Missing left-hand operand");
                 EqualityExpr();
                 return null;
             }
-            else if (Match(TokenType.GREATER_EQUAL,TokenType.GREATER,TokenType.LESS_EQUAL,TokenType.LESS))
+            else if (Match(TokenType.GREATER_EQUAL, TokenType.GREATER, TokenType.LESS_EQUAL, TokenType.LESS))
             {
                 Error(Previous(), "Missing left-hand operand");
                 ComparisonExpr();
@@ -166,7 +175,7 @@ namespace cslox
                 TermExpr();
                 return null;
             }
-            else if (Match(TokenType.SLASH,TokenType.STAR))
+            else if (Match(TokenType.SLASH, TokenType.STAR))
             {
                 Error(Previous(), "Missing left-hand operand");
                 FactorExpr();
@@ -187,7 +196,7 @@ namespace cslox
                     return true;
                 }
             }
-            return false;   
+            return false;
         }
 
         bool Check(TokenType type)
@@ -234,7 +243,7 @@ namespace cslox
         {
             Advance();
 
-            while(!IsAtEnd())
+            while (!IsAtEnd())
             {
                 if (Previous().type == TokenType.SEMICOLON) return;
 

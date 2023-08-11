@@ -4,8 +4,10 @@ namespace cslox
 {
     internal class Cslox
     {
-        static bool hasError = false;
+        static readonly Interpreter interpreter = new();
 
+        static bool hasError = false;
+        static bool hasRuntimeError = false;
 
         static void Main(string[] args)
         {
@@ -31,6 +33,8 @@ namespace cslox
             // stop processing immediately
             if (hasError)
                 return;
+            if (hasRuntimeError)
+                return;
         }
 
         private static void RunPrompt()
@@ -55,9 +59,9 @@ namespace cslox
             Parser parser = new Parser(tokens);
             Expr? expression = parser.Parse();
 
-            if (hasError) return;
+            if (hasError || expression == null) return;
 
-            Console.WriteLine(new AstPrinter().Print(expression));
+            interpreter.Interpret(expression);
         }
 
         internal static void Error(int line, string message)
@@ -71,6 +75,12 @@ namespace cslox
                 Report(token.line, " at end", message);
             else
                 Report(token.line, String.Format(" at '{0}'", token.lexeme), message);
+        }
+
+        internal static void RuntimeError(RuntimeError error)
+        {
+            Console.Error.WriteLine("{0}\n[ling {1}]", error.Message, error.token.line);
+            hasRuntimeError = true;
         }
 
         private static void Report(int line, string where, string message)

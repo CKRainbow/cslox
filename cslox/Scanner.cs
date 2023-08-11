@@ -91,6 +91,12 @@
                 case '*':
                     AddToken(TokenType.STAR);
                     break;
+                case '?':
+                    AddToken(TokenType.QUESTION);
+                    break;
+                case ':':
+                    AddToken(TokenType.COLON);
+                    break;
                 case '!':
                     AddToken(Match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
                     break;
@@ -230,7 +236,7 @@
                 while (IsDigit(Peek())) Advance();
             }
 
-            AddToken(TokenType.NUMBER, float.Parse(source.Substring(start, current - start)));
+            AddToken(TokenType.NUMBER, double.Parse(source.Substring(start, current - start)));
         }
 
         void Identifier()

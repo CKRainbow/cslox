@@ -8,10 +8,34 @@
 
     interface IVisitor<T>
     {
+        T VisitTernaryExpr(Ternary expr);
         T VisitBinaryExpr(Binary expr);
         T VisitGroupingExpr(Grouping expr);
         T VisitLiteralExpr(Literal expr);
         T VisitUnaryExpr(Unary expr);
+    }
+
+    internal class Ternary : Expr
+    {
+        internal Ternary(Expr left, Token op1, Expr mid, Token op2, Expr right)
+        {
+            this.left = left;
+            this.op1 = op1;
+            this.mid = mid;
+            this.op2 = op2;
+            this.right = right;
+        }
+
+        internal readonly Expr left;
+        internal readonly Token op1;
+        internal readonly Expr mid;
+        internal readonly Token op2;
+        internal readonly Expr right;
+
+        internal override T Accept<T>(IVisitor<T> visitor)
+        {
+            return visitor.VisitTernaryExpr(this);
+        }
     }
 
     internal class Binary : Expr
@@ -50,12 +74,12 @@
 
     internal class Literal : Expr
     {
-        internal Literal(object? value)
+        internal Literal(object value)
         {
             this.value = value;
         }
 
-        internal readonly object? value;
+        internal readonly object value;
 
         internal override T Accept<T>(IVisitor<T> visitor)
         {

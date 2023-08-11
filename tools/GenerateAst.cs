@@ -16,6 +16,7 @@ namespace tools
             DefineAst(
                 outputDir, "Expr", new List<string>()
                 {
+                    "Ternary  : Expr left, Token op1, Expr mid, Token op2, Expr right",
                     "Binary   : Expr left, Token op, Expr right",
                     "Grouping : Expr expr",
                     "Literal  : object value",
@@ -42,7 +43,7 @@ namespace tools
                 // visitor interface 
                 sw.WriteLine();
                 DefineVisitor(sw, baseName, types);
-                
+
 
                 // subclass of base class
                 foreach (string type in types)
@@ -89,7 +90,7 @@ namespace tools
             sw.WriteLine("internal override T Accept<T>(IVisitor<T> visitor)");
             sw.WriteLine("{");
 
-            sw.WriteLine("return visitor.Visit{0}{1}(this);",className, baseName);
+            sw.WriteLine("return visitor.Visit{0}{1}(this);", className, baseName);
 
             sw.WriteLine("}");
 
