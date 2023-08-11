@@ -16,11 +16,23 @@ namespace tools
             DefineAst(
                 outputDir, "Expr", new List<string>()
                 {
+                    "Assign   : Token name, Expr value",
                     "Ternary  : Expr left, Token op1, Expr mid, Token op2, Expr right",
                     "Binary   : Expr left, Token op, Expr right",
                     "Grouping : Expr expr",
-                    "Literal  : object value",
-                    "Unary    : Token op, Expr right"
+                    "Literal  : object? value",
+                    "Unary    : Token op, Expr right",
+                    "Variable : Token name"
+                }
+                );
+
+            DefineAst(
+                outputDir, "Stmt", new List<string>()
+                {
+                    "Expression : Expr expr",
+                    "Print      : Expr expr",
+                    "Var        : Token name, Expr? initializer",
+                    "Block      : List<Stmt> statements"
                 }
                 );
         }
@@ -34,16 +46,13 @@ namespace tools
                 sw.WriteLine("{");
 
                 // base class
-                sw.WriteLine("internal abstract class {0}", baseName);
-                sw.WriteLine("{");
-                sw.WriteLine();
-                sw.WriteLine("internal abstract T Accept<T>(IVisitor<T> visitor);");
-                sw.WriteLine("}");
-
+                sw.WriteLine("\tinternal abstract class {0}", baseName);
+                sw.WriteLine("\t{");
                 // visitor interface 
                 sw.WriteLine();
                 DefineVisitor(sw, baseName, types);
-
+                sw.WriteLine();
+                sw.WriteLine("\t\tinternal abstract T Accept<T>(IVisitor<T> visitor);");
 
                 // subclass of base class
                 foreach (string type in types)
@@ -54,6 +63,8 @@ namespace tools
                     DefineType(sw, baseName, className, fields);
                 }
 
+                sw.WriteLine("\t}");
+
                 sw.WriteLine("}");
             }
         }
@@ -61,54 +72,54 @@ namespace tools
         static void DefineType(StreamWriter sw, string baseName, string className, string fieldList)
         {
             // class define
-            sw.WriteLine("internal class {0} : {1}", className, baseName);
-            sw.WriteLine("{");
+            sw.WriteLine("\t\tinternal class {0} : {1}", className, baseName);
+            sw.WriteLine("\t\t{");
 
             // constructor
-            sw.WriteLine("internal {0} ({1})", className, fieldList);
-            sw.WriteLine("{");
+            sw.WriteLine("\t\t\tinternal {0}({1})", className, fieldList);
+            sw.WriteLine("\t\t\t{");
 
             string[] fileds = fieldList.Split(',');
             foreach (var field in fileds)
             {
                 string fieldName = field.Trim().Split(' ')[1];
-                sw.WriteLine("this.{0} = {1};", fieldName, fieldName);
+                sw.WriteLine("\t\t\t\tthis.{0} = {1};", fieldName, fieldName);
             }
 
-            sw.WriteLine("}");
+            sw.WriteLine("\t\t\t}");
 
             sw.WriteLine();
 
             // fields
             foreach (var field in fileds)
             {
-                sw.WriteLine("internal readonly {0};", field.Trim());
+                sw.WriteLine("\t\t\tinternal readonly {0};", field.Trim());
             }
 
             // accept
             sw.WriteLine();
-            sw.WriteLine("internal override T Accept<T>(IVisitor<T> visitor)");
-            sw.WriteLine("{");
+            sw.WriteLine("\t\t\tinternal override T Accept<T>(IVisitor<T> visitor)");
+            sw.WriteLine("\t\t\t{");
 
-            sw.WriteLine("return visitor.Visit{0}{1}(this);", className, baseName);
+            sw.WriteLine("\t\t\t\treturn visitor.Visit{0}{1}(this);", className, baseName);
 
-            sw.WriteLine("}");
+            sw.WriteLine("\t\t\t}");
 
-            sw.WriteLine("}");
+            sw.WriteLine("\t\t}");
         }
 
         static void DefineVisitor(StreamWriter sw, string baseName, List<string> types)
         {
-            sw.WriteLine("interface IVisitor<T>");
-            sw.WriteLine("{");
+            sw.WriteLine("\t\tinternal interface IVisitor<T>");
+            sw.WriteLine("\t\t{");
 
             foreach (var type in types)
             {
                 string typeName = type.Split(':')[0].Trim();
-                sw.WriteLine("T Visit{0}{1}({0} {2});", typeName, baseName, baseName.ToLower());
+                sw.WriteLine("\t\t\tT Visit{0}{1}({0} {2});", typeName, baseName, baseName.ToLower());
             }
 
-            sw.WriteLine("}");
+            sw.WriteLine("\t\t}");
         }
     }
 }

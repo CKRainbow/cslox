@@ -9,21 +9,121 @@
         readonly List<Token> tokens;
         int current = 0;
 
+        bool allowExpression;
+        bool foundExpression = false;
+
         internal Parser(List<Token> tokens)
         {
             this.tokens = tokens;
         }
 
-        internal Expr? Parse()
+        internal List<Stmt> Parse()
+        {
+            List<Stmt> statements = new List<Stmt>();
+            while (!IsAtEnd())
+                statements.Add(Declaration());
+
+            return statements;
+        }
+
+        internal object? parseRepl()
+        {
+            allowExpression = true;
+            List<Stmt> statements = new();
+            while(!IsAtEnd())
+            {
+                statements.Add(Declaration());
+
+                if (foundExpression)
+                {
+                    Stmt last = statements.Last();
+                    return ((Stmt.Expression)last).expr;
+                }
+
+                allowExpression = false;
+            }
+
+            return statements;
+        }
+
+        // program -> declaration* EOF
+
+
+        // declaration -> varDecl | statement
+        Stmt Declaration()
         {
             try
             {
-                return ExpressionExpr();
+                if (Match(TokenType.VAR)) return VarDeclaration();
+
+                return Statement();
             }
-            catch (ParseError e)
+            catch(ParseError ex)
             {
+                Synchronize();
                 return null;
             }
+            
+        }
+        
+
+        // varDecl -> "var" IDENTIFIER ( "=" expression )? ";"
+        Stmt VarDeclaration()
+        {
+            Token name = Consume(TokenType.IDENTIFIER, "");
+
+            Expr? initializer = null;
+            if (Match(TokenType.EQUAL)) initializer = ExpressionExpr();
+
+            Consume(TokenType.SEMICOLON, "Expect ';' after variable declaration");
+
+            return new Stmt.Var(name, initializer);
+        }
+
+
+        // statement -> exprStmt | printStmt | block;
+        Stmt Statement()
+        {
+            if (Match(TokenType.PRINT)) return PrintStatment();
+
+            if (Match(TokenType.LEFT_BRACE)) return Block();
+
+            return ExpressionStatement();
+        }
+
+        // block -> "{" declaration* "}"
+        Stmt Block()
+        {
+            List<Stmt> statements = new();
+
+            while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
+                statements.Add(Declaration());
+
+            Consume(TokenType.RIGHT_BRACE, "Expect '}' after block");
+            return new Stmt.Block(statements);
+        }
+
+        // exprStmt -> expression ";"
+        Stmt ExpressionStatement()
+        {
+            Expr expr = ExpressionExpr();
+
+            if (allowExpression && IsAtEnd())
+                foundExpression = true;
+            else
+                Consume(TokenType.SEMICOLON, "Expect ';' after value");
+
+            return new Stmt.Expression(expr);
+        }
+
+        // printStmt -> "print" expression ";"
+        Stmt PrintStatment()
+        {
+            Expr expr = ExpressionExpr();
+
+            Consume(TokenType.SEMICOLON, "Expect ';' after value");
+
+            return new Stmt.Print(expr);
         }
 
         // expression -> comma
@@ -32,18 +132,41 @@
             return CommaExpr();
         }
 
-        // comma -> conditional ( "," conditional )*
+        // comma -> assignment ( "," assignment )*
         Expr CommaExpr()
         {
-            Expr expr = ConditionalExpr();
+            Expr expr = AssignmentExpr();
             while (Match(TokenType.COMMA))
             {
                 Token op = Previous();
-                Expr right = ConditionalExpr();
-                expr = new Binary(expr, op, right);
+                Expr right = AssignmentExpr();
+                expr = new Expr.Binary(expr, op, right);
             }
             return expr;
         }
+
+        // assignment -> IDENTIFIER "=" assignment | conditional
+        Expr AssignmentExpr()
+        {
+            Expr expr = ConditionalExpr();
+
+            if (Match(TokenType.EQUAL))
+            {
+                Token equals = Previous();
+                Expr value = AssignmentExpr();
+
+                if (expr is Expr.Variable)
+                {
+                    Token name = ((Expr.Variable)expr).name;
+                    return new Expr.Assign(name, value);
+                }
+
+                Error(equals, "Invalid assignment target");
+            }
+
+            return expr;
+        }
+
 
         // conditional -> equality ( "?" expression ":" conditional )?
         Expr ConditionalExpr()
@@ -56,7 +179,7 @@
                 Consume(TokenType.COLON, "Expect ':' after then branch of conditional expression");
                 var op2 = Previous();
                 Expr right = ConditionalExpr();
-                expr = new Ternary(expr, op1, mid, op2, right);
+                expr = new Expr.Ternary(expr, op1, mid, op2, right);
             }
             return expr;
         }
@@ -70,7 +193,7 @@
             {
                 Token op = Previous();
                 Expr right = ComparisonExpr();
-                expr = new Binary(expr, op, right);
+                expr = new Expr.Binary(expr, op, right);
             }
             return expr;
         }
@@ -84,7 +207,7 @@
             {
                 Token op = Previous();
                 Expr right = TermExpr();
-                expr = new Binary(expr, op, right);
+                expr = new Expr.Binary(expr, op, right);
             }
             return expr;
         }
@@ -98,7 +221,7 @@
             {
                 Token op = Previous();
                 Expr right = FactorExpr();
-                expr = new Binary(expr, op, right);
+                expr = new Expr.Binary(expr, op, right);
             }
             return expr;
         }
@@ -112,7 +235,7 @@
             {
                 Token op = Previous();
                 Expr right = UnaryExpr();
-                expr = new Binary(expr, op, right);
+                expr = new Expr.Binary(expr, op, right);
             }
             return expr;
         }
@@ -125,29 +248,31 @@
             {
                 Token op = Previous();
                 Expr expr = UnaryExpr();
-                return new Unary(op, expr);
+                return new Expr.Unary(op, expr);
             }
 
             return PrimaryExpr();
         }
 
-        // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
+        // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER
         // error production for left expr missing binary expression
         // + * / > >= < <= == != ,
         Expr PrimaryExpr()
         {
-            if (Match(TokenType.FALSE)) return new Literal(false);
-            if (Match(TokenType.TRUE)) return new Literal(true);
-            if (Match(TokenType.NIL)) return new Literal(null);
+            if (Match(TokenType.FALSE)) return new Expr.Literal(false);
+            if (Match(TokenType.TRUE)) return new Expr.Literal(true);
+            if (Match(TokenType.NIL)) return new Expr.Literal(null);
 
             if (Match(TokenType.NUMBER, TokenType.STRING))
-                return new Literal(Previous().literal);
+                return new Expr.Literal(Previous().literal);
+            if (Match(TokenType.IDENTIFIER))
+                return new Expr.Variable(Previous());
 
             if (Match(TokenType.LEFT_PAREN))
             {
                 Expr expr = ExpressionExpr();
                 Consume(TokenType.RIGHT_PAREN, "Expect ')' after expression");
-                return new Grouping(expr);
+                return new Expr.Grouping(expr);
             }
 
             // error productions

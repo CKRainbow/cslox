@@ -41,12 +41,30 @@ namespace cslox
         {
             while (true)
             {
+                hasError = false; // do not stop even there is error;
+
                 Console.Write("> ");
                 string? line = Console.ReadLine();
-                if (line == null)
-                    break;
-                Run(line);
-                hasError = false; // do not stop even there is error;
+                
+                Scanner scanner = new Scanner(line??"");
+                List<Token> tokens = scanner.scanTokens();
+
+                Parser parser = new Parser(tokens);
+                object? syntax = parser.parseRepl();
+
+                if (hasError) continue;
+
+                if (syntax is List<Stmt>)
+                    interpreter.Interpret((List<Stmt>)syntax);
+                else if (syntax is Expr)
+                {
+                    string result = interpreter.Interpret((Expr)syntax);
+                    if (result != null)
+                        Console.WriteLine("= {0}", result);
+                }
+
+
+                
             }
         }
 
@@ -56,11 +74,11 @@ namespace cslox
             List<Token> tokens = scanner.scanTokens();
 
             Parser parser = new Parser(tokens);
-            Expr? expression = parser.Parse();
+            List<Stmt> statements = parser.Parse();
 
-            if (hasError || expression == null) return;
+            if (hasError || statements.Count == 0) return;
 
-            interpreter.Interpret(expression);
+            interpreter.Interpret(statements);
         }
 
         internal static void Error(int line, string message)

@@ -1,17 +1,54 @@
 ﻿namespace cslox
 {
-    internal class Interpreter : IVisitor<object?>
+    internal class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<object?>
     {
-        internal void Interpret(Expr expression)
+        Environment environment = new();
+
+        internal void Interpret(List<Stmt> statements)
         {
             try
             {
-                object? value = Evaluate(expression);
-                Console.WriteLine(Stringify(value));
+                foreach (Stmt stmt in statements)
+                    Execute(stmt);
             }
             catch (RuntimeError ex)
             {
                 Cslox.RuntimeError(ex);
+            }
+        }
+
+        internal string? Interpret(Expr expr)
+        {
+            try
+            {
+                object? value = Evaluate(expr);
+                return Stringify(value);
+            }
+            catch (RuntimeError ex)
+            {
+                Cslox.RuntimeError(ex);
+                return null;
+            }
+        }
+
+        void Execute(Stmt stmt)
+        {
+            stmt.Accept(this);
+        }
+
+        void ExecuteBlock(List<Stmt> statements, Environment environment)
+        {
+            Environment preEnvironment = this.environment;
+
+            try
+            {
+                this.environment = environment;
+                foreach (Stmt stmt in statements)
+                    Execute(stmt);
+            }
+            finally
+            {
+                this.environment = preEnvironment;
             }
         }
 
@@ -20,7 +57,7 @@
             return expr.Accept(this);
         }
 
-        object? IVisitor<object?>.VisitBinaryExpr(Binary expr)
+        public object? VisitBinaryExpr(Expr.Binary expr)
         {
             object? left = Evaluate(expr.left);
             object? right = Evaluate(expr.right);
@@ -72,17 +109,17 @@
             return null;
         }
 
-        object? IVisitor<object?>.VisitGroupingExpr(Grouping expr)
+        public object? VisitGroupingExpr(Expr.Grouping expr)
         {
             return Evaluate(expr.expr);
         }
 
-        object? IVisitor<object?>.VisitLiteralExpr(Literal expr)
+        public object? VisitLiteralExpr(Expr.Literal expr)
         {
             return expr.value;
         }
 
-        object? IVisitor<object?>.VisitUnaryExpr(Unary expr)
+        public object? VisitUnaryExpr(Expr.Unary expr)
         {
             object? right = Evaluate(expr.right);
 
@@ -98,7 +135,7 @@
             return null;
         }
 
-        object? IVisitor<object?>.VisitTernaryExpr(Ternary expr)
+        public object? VisitTernaryExpr(Expr.Ternary expr)
         {
             object? cond = Evaluate(expr.left);
 
@@ -106,6 +143,47 @@
                 return Evaluate(expr.mid);
             else
                 return Evaluate(expr.right);
+        }
+
+        public object? VisitVariableExpr(Expr.Variable expr)
+        {
+            return environment.Get(expr.name);
+        }
+
+        public object? VisitAssignExpr(Expr.Assign expr)
+        {
+            object? value = Evaluate(expr.value);
+            environment.Assign(expr.name, value);
+            return value;
+        }
+
+        public object? VisitExpressionStmt(Stmt.Expression stmt)
+        {
+            Evaluate(stmt.expr);
+            return null;
+        }
+
+        public object? VisitPrintStmt(Stmt.Print stmt)
+        {
+            object? value = Evaluate(stmt.expr);
+            Console.WriteLine(Stringify(value));
+            return null;
+        }
+
+        public object? VisitVarStmt(Stmt.Var stmt)
+        {
+            object? value = null;
+            if (stmt.initializer != null)
+                value = Evaluate(stmt.initializer);
+
+            environment.Define(stmt.name.lexeme, value);
+            return null;
+        }
+
+        public object? VisitBlockStmt(Stmt.Block stmt)
+        {
+            ExecuteBlock(stmt.statements, new Environment(environment));
+            return null;
         }
 
         bool IsTruthy(object? value)
