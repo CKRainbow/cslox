@@ -146,18 +146,17 @@
 
         string Stringify(object? value)
         {
-            if (value == null)
-                return "nil";
+            if (value == null) return "nil";
 
             if (value is double)
             {
-                string text = value.ToString();
+                string text = value.ToString() ?? "";
                 if (text.EndsWith(".0"))
                     text = text.Substring(0, text.Length - 2);
                 return text;
             }
 
-            return value.ToString();
+            return value.ToString() ?? "";
         }
     }
 }

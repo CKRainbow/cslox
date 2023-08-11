@@ -39,7 +39,6 @@ namespace cslox
 
         private static void RunPrompt()
         {
-
             while (true)
             {
                 Console.Write("> ");
