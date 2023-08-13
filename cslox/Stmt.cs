@@ -7,8 +7,10 @@
 		{
 			T VisitExpressionStmt(Expression stmt);
 			T VisitPrintStmt(Print stmt);
+			T VisitIfStmt(If stmt);
 			T VisitVarStmt(Var stmt);
 			T VisitBlockStmt(Block stmt);
+			T VisitWhileStmt(While stmt);
 		}
 
 		internal abstract T Accept<T>(IVisitor<T> visitor);
@@ -43,6 +45,25 @@
 			}
 		}
 
+		internal class If : Stmt
+		{
+			internal If(Expr condition, Stmt thenBranch, Stmt? elseBranch)
+			{
+				this.condition = condition;
+				this.thenBranch = thenBranch;
+				this.elseBranch = elseBranch;
+			}
+
+			internal readonly Expr condition;
+			internal readonly Stmt thenBranch;
+			internal readonly Stmt? elseBranch;
+
+			internal override T Accept<T>(IVisitor<T> visitor)
+			{
+				return visitor.VisitIfStmt(this);
+			}
+		}
+
 		internal class Var : Stmt
 		{
 			internal Var(Token name, Expr? initializer)
@@ -72,6 +93,23 @@
 			internal override T Accept<T>(IVisitor<T> visitor)
 			{
 				return visitor.VisitBlockStmt(this);
+			}
+		}
+
+		internal class While : Stmt
+		{
+			internal While(Expr condition, Stmt body)
+			{
+				this.condition = condition;
+				this.body = body;
+			}
+
+			internal readonly Expr condition;
+			internal readonly Stmt body;
+
+			internal override T Accept<T>(IVisitor<T> visitor)
+			{
+				return visitor.VisitWhileStmt(this);
 			}
 		}
 	}

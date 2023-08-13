@@ -6,8 +6,9 @@
 		internal interface IVisitor<T>
 		{
 			T VisitAssignExpr(Assign expr);
-			T VisitTernaryExpr(Ternary expr);
+			T VisitConditionExpr(Condition expr);
 			T VisitBinaryExpr(Binary expr);
+			T VisitLogicExpr(Logic expr);
 			T VisitGroupingExpr(Grouping expr);
 			T VisitLiteralExpr(Literal expr);
 			T VisitUnaryExpr(Unary expr);
@@ -33,26 +34,22 @@
 			}
 		}
 
-		internal class Ternary : Expr
+		internal class Condition : Expr
 		{
-			internal Ternary(Expr left, Token op1, Expr mid, Token op2, Expr right)
+			internal Condition(Expr condition, Expr thenExpr, Expr elseExpr)
 			{
-				this.left = left;
-				this.op1 = op1;
-				this.mid = mid;
-				this.op2 = op2;
-				this.right = right;
+				this.condition = condition;
+				this.thenExpr = thenExpr;
+				this.elseExpr = elseExpr;
 			}
 
-			internal readonly Expr left;
-			internal readonly Token op1;
-			internal readonly Expr mid;
-			internal readonly Token op2;
-			internal readonly Expr right;
+			internal readonly Expr condition;
+			internal readonly Expr thenExpr;
+			internal readonly Expr elseExpr;
 
 			internal override T Accept<T>(IVisitor<T> visitor)
 			{
-				return visitor.VisitTernaryExpr(this);
+				return visitor.VisitConditionExpr(this);
 			}
 		}
 
@@ -72,6 +69,25 @@
 			internal override T Accept<T>(IVisitor<T> visitor)
 			{
 				return visitor.VisitBinaryExpr(this);
+			}
+		}
+
+		internal class Logic : Expr
+		{
+			internal Logic(Expr left, Token op, Expr right)
+			{
+				this.left = left;
+				this.op = op;
+				this.right = right;
+			}
+
+			internal readonly Expr left;
+			internal readonly Token op;
+			internal readonly Expr right;
+
+			internal override T Accept<T>(IVisitor<T> visitor)
+			{
+				return visitor.VisitLogicExpr(this);
 			}
 		}
 

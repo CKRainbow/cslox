@@ -135,14 +135,29 @@
             return null;
         }
 
-        public object? VisitTernaryExpr(Expr.Ternary expr)
+        public object? VisitConditionExpr(Expr.Condition expr)
         {
-            object? cond = Evaluate(expr.left);
+            object? cond = Evaluate(expr.condition);
 
             if (IsTruthy(cond))
-                return Evaluate(expr.mid);
+                return Evaluate(expr.thenExpr);
             else
-                return Evaluate(expr.right);
+                return Evaluate(expr.elseExpr);
+        }
+
+        public object? VisitLogicExpr(Expr.Logic expr)
+        {
+            object? left = Evaluate(expr.left);
+            if (expr.op.type == TokenType.OR)
+            {
+                if (IsTruthy(left)) return left;
+            }
+            else
+            {
+                if (!IsTruthy(left)) return left;
+            }
+
+            return Evaluate(expr.right);
         }
 
         public object? VisitVariableExpr(Expr.Variable expr)
@@ -167,6 +182,26 @@
         {
             object? value = Evaluate(stmt.expr);
             Console.WriteLine(Stringify(value));
+            return null;
+        }
+
+        public object? VisitIfStmt(Stmt.If stmt)
+        {
+            object? condition = Evaluate(stmt.condition);
+            if (IsTruthy(condition))
+                Execute(stmt.thenBranch);
+            else if (stmt.elseBranch != null)
+                Execute(stmt.elseBranch);
+            return null;
+        }
+
+
+        public object? VisitWhileStmt(Stmt.While stmt)
+        {
+            while(IsTruthy(Evaluate(stmt.condition)))
+            {
+                Execute(stmt.body);
+            }
             return null;
         }
 

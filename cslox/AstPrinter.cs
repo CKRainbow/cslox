@@ -57,9 +57,9 @@ namespace cslox
             return Parenthesize(expr.op.lexeme, expr.right);
         }
 
-        public string VisitTernaryExpr(Expr.Ternary expr)
+        public string VisitTernaryExpr(Expr.Condition expr)
         {
-            return Parenthesize("cond", expr.left, expr.mid, expr.right);
+            return Parenthesize("cond", expr.condition, expr.thenExpr, expr.elseExpr);
         }
 
         public string VisitExpressionStmt(Stmt.Expression stmt)
@@ -88,6 +88,26 @@ namespace cslox
         }
 
         public string VisitBlockStmt(Stmt.Block stmt)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitConditionExpr(Expr.Condition expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitLogicExpr(Expr.Logic expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitIfStmt(Stmt.If stmt)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitWhileStmt(Stmt.While stmt)
         {
             throw new NotImplementedException();
         }

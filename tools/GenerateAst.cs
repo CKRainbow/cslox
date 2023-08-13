@@ -16,13 +16,14 @@ namespace tools
             DefineAst(
                 outputDir, "Expr", new List<string>()
                 {
-                    "Assign   : Token name, Expr value",
-                    "Ternary  : Expr left, Token op1, Expr mid, Token op2, Expr right",
-                    "Binary   : Expr left, Token op, Expr right",
-                    "Grouping : Expr expr",
-                    "Literal  : object? value",
-                    "Unary    : Token op, Expr right",
-                    "Variable : Token name"
+                    "Assign    : Token name, Expr value",
+                    "Condition : Expr condition, Expr thenExpr, Expr elseExpr",
+                    "Binary    : Expr left, Token op, Expr right",
+                    "Logic     : Expr left, Token op, Expr right",
+                    "Grouping  : Expr expr",
+                    "Literal   : object? value",
+                    "Unary     : Token op, Expr right",
+                    "Variable  : Token name"
                 }
                 );
 
@@ -31,8 +32,10 @@ namespace tools
                 {
                     "Expression : Expr expr",
                     "Print      : Expr expr",
+                    "If         : Expr condition, Stmt thenBranch, Stmt? elseBranch",
                     "Var        : Token name, Expr? initializer",
-                    "Block      : List<Stmt> statements"
+                    "Block      : List<Stmt> statements",
+                    "While      : Expr condition, Stmt body"
                 }
                 );
         }

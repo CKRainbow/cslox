@@ -58,7 +58,7 @@ namespace cslox
                     interpreter.Interpret((List<Stmt>)syntax);
                 else if (syntax is Expr)
                 {
-                    string result = interpreter.Interpret((Expr)syntax);
+                    string? result = interpreter.Interpret((Expr)syntax);
                     if (result != null)
                         Console.WriteLine("= {0}", result);
                 }

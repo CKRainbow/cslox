@@ -81,10 +81,16 @@
         }
 
 
-        // statement -> exprStmt | printStmt | block;
+        // statement -> exprStmt | printStmt | ifStmt | whileStmt | forStmt | block;
         Stmt Statement()
         {
             if (Match(TokenType.PRINT)) return PrintStatment();
+
+            if (Match(TokenType.IF)) return IfStatement();
+
+            if (Match(TokenType.WHILE)) return WhileStatement();
+
+            if (Match(TokenType.FOR)) return ForStatement();
 
             if (Match(TokenType.LEFT_BRACE)) return Block();
 
@@ -124,6 +130,72 @@
             Consume(TokenType.SEMICOLON, "Expect ';' after value");
 
             return new Stmt.Print(expr);
+        }
+
+        // ifStmt -> "if" "(" expression ")" statement ( "else" statement )?
+        Stmt IfStatement()
+        {
+            Consume(TokenType.LEFT_PAREN, "Expect '(' after if");
+            Expr condition = ExpressionExpr();
+            Consume(TokenType.RIGHT_PAREN, "Expect ')' after condition");
+            
+            Stmt thenBranch = Statement();
+            Stmt? elseBranch = null;
+            if (Match(TokenType.ELSE))
+                elseBranch = Statement();
+
+            return new Stmt.If(condition, thenBranch, elseBranch);
+        }
+
+        // whileStmt -> "while" "(" expression ")" statement
+        Stmt WhileStatement()
+        {
+            Consume(TokenType.LEFT_PAREN, "Expect '(' after while");
+            Expr condition = ExpressionExpr();
+            Consume(TokenType.RIGHT_PAREN, "Expect ')' after condition");
+
+            Stmt body = Statement();
+
+            return new Stmt.While(condition, body);
+        }
+
+        // forStmt -> "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement
+        // 使用语法脱糖，前端接收使用了语法糖的代码，并将其转换成后端知道如何执行的更原始的形式。
+        Stmt ForStatement()
+        {
+            Consume(TokenType.LEFT_PAREN, "Expect '(' after for");
+            Stmt? initializer;
+
+            if (Match(TokenType.SEMICOLON))
+                initializer = null;
+            else if (Match(TokenType.VAR))
+                initializer = VarDeclaration();
+            else
+                initializer = ExpressionStatement();
+
+            Expr? condition = null;
+            if (!Check(TokenType.SEMICOLON))
+                condition = ExpressionExpr();
+            Consume(TokenType.SEMICOLON, "Expect ';' after loop condition");
+
+            Expr? increment = null;
+            if (!Check(TokenType.RIGHT_PAREN))
+                increment = ExpressionExpr();
+            Consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses");
+
+            Stmt body = Statement();
+
+            // De-sugaring starts
+            if (increment != null)
+                body = new Stmt.Block(new List<Stmt> { body, new Stmt.Expression(increment) });
+            if (condition == null)
+                condition = new Expr.Literal(true);
+            body = new Stmt.While(condition, body);
+            if (initializer != null)
+                body = new Stmt.Block(new List<Stmt> { initializer, body });
+            // De-sugaring ends
+
+            return body;
         }
 
         // expression -> comma
@@ -168,19 +240,45 @@
         }
 
 
-        // conditional -> equality ( "?" expression ":" conditional )?
+        // conditional -> logic_or ( "?" expression ":" conditional )?
         Expr ConditionalExpr()
         {
-            Expr expr = EqualityExpr();
+            Expr expr = LogicOrExpr();
             if (Match(TokenType.QUESTION))
             {
-                var op1 = Previous();
-                Expr mid = ExpressionExpr();
+                Expr thenExpr = ExpressionExpr();
                 Consume(TokenType.COLON, "Expect ':' after then branch of conditional expression");
-                var op2 = Previous();
-                Expr right = ConditionalExpr();
-                expr = new Expr.Ternary(expr, op1, mid, op2, right);
+                Expr elseExpr = ConditionalExpr();
+                expr = new Expr.Condition(expr, thenExpr, elseExpr);
             }
+            return expr;
+        }
+
+        // logic_or -> logic_and ( "or" logic_and )*
+        Expr LogicOrExpr()
+        {
+            Expr expr = LogicAndExpr();
+            while (Match(TokenType.OR))
+            {
+                Token op = Previous();
+                Expr right = LogicAndExpr();
+                expr = new Expr.Logic(expr, op, right);
+            }
+
+            return expr;
+        }
+
+        // logic_and -> equality ( "and" equality )*
+        Expr LogicAndExpr()
+        {
+            Expr expr = EqualityExpr();
+            while (Match(TokenType.AND))
+            {
+                Token op = Previous();
+                Expr right = EqualityExpr();
+                expr = new Expr.Logic(expr, op, right);
+            }
+
             return expr;
         }
 
