@@ -111,5 +111,10 @@ namespace cslox
         {
             throw new NotImplementedException();
         }
+
+        public string VisitBreakStmt(Stmt.Break stmt)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

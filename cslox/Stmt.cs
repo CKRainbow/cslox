@@ -11,6 +11,7 @@
 			T VisitVarStmt(Var stmt);
 			T VisitBlockStmt(Block stmt);
 			T VisitWhileStmt(While stmt);
+			T VisitBreakStmt(Break stmt);
 		}
 
 		internal abstract T Accept<T>(IVisitor<T> visitor);
@@ -110,6 +111,19 @@
 			internal override T Accept<T>(IVisitor<T> visitor)
 			{
 				return visitor.VisitWhileStmt(this);
+			}
+		}
+
+		internal class Break : Stmt
+		{
+			internal Break()
+			{
+			}
+
+
+			internal override T Accept<T>(IVisitor<T> visitor)
+			{
+				return visitor.VisitBreakStmt(this);
 			}
 		}
 	}

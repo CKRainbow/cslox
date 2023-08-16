@@ -25,6 +25,7 @@
             keywords.Add("true", TokenType.TRUE);
             keywords.Add("var", TokenType.VAR);
             keywords.Add("while", TokenType.WHILE);
+            keywords.Add("break", TokenType.BREAK);
         }
 
         int start = 0;

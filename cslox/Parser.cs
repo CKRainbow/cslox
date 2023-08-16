@@ -12,6 +12,8 @@
         bool allowExpression;
         bool foundExpression = false;
 
+        int loopDepth = 0;
+
         internal Parser(List<Token> tokens)
         {
             this.tokens = tokens;
@@ -94,6 +96,8 @@
 
             if (Match(TokenType.LEFT_BRACE)) return Block();
 
+            if (Match(TokenType.BREAK)) return BreakStatement();
+
             return ExpressionStatement();
         }
 
@@ -107,6 +111,15 @@
 
             Consume(TokenType.RIGHT_BRACE, "Expect '}' after block");
             return new Stmt.Block(statements);
+        }
+
+        Stmt BreakStatement()
+        {
+            if (loopDepth == 0)
+                Error(Previous(), "Must be inside a loop to use 'break'");
+            Consume(TokenType.SEMICOLON, "Expect ';' after break");
+
+            return new Stmt.Break();
         }
 
         // exprStmt -> expression ";"
@@ -154,9 +167,17 @@
             Expr condition = ExpressionExpr();
             Consume(TokenType.RIGHT_PAREN, "Expect ')' after condition");
 
-            Stmt body = Statement();
+            try
+            {
+                loopDepth++;
+                Stmt body = Statement();
+                return new Stmt.While(condition, body);
+            }
+            finally
+            {
+                loopDepth--;
+            }
 
-            return new Stmt.While(condition, body);
         }
 
         // forStmt -> "for" "(" ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement
@@ -183,19 +204,28 @@
                 increment = ExpressionExpr();
             Consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses");
 
-            Stmt body = Statement();
+            try
+            {
+                loopDepth++;
 
-            // De-sugaring starts
-            if (increment != null)
-                body = new Stmt.Block(new List<Stmt> { body, new Stmt.Expression(increment) });
-            if (condition == null)
-                condition = new Expr.Literal(true);
-            body = new Stmt.While(condition, body);
-            if (initializer != null)
-                body = new Stmt.Block(new List<Stmt> { initializer, body });
-            // De-sugaring ends
+                Stmt body = Statement();
 
-            return body;
+                // De-sugaring starts
+                if (increment != null)
+                    body = new Stmt.Block(new List<Stmt> { body, new Stmt.Expression(increment) });
+                if (condition == null)
+                    condition = new Expr.Literal(true);
+                body = new Stmt.While(condition, body);
+                if (initializer != null)
+                    body = new Stmt.Block(new List<Stmt> { initializer, body });
+                // De-sugaring ends
+
+                return body;
+            }
+            finally
+            {
+                loopDepth--;
+            }
         }
 
         // expression -> comma

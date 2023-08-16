@@ -1,8 +1,12 @@
 ﻿namespace cslox
 {
+    class BreakException : SystemException { }
+
     internal class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<object?>
     {
         Environment environment = new();
+
+        
 
         internal void Interpret(List<Stmt> statements)
         {
@@ -195,13 +199,21 @@
             return null;
         }
 
+        public object? VisitBreakStmt(Stmt.Break stmt)
+        {
+            throw new BreakException();
+        }
 
         public object? VisitWhileStmt(Stmt.While stmt)
         {
-            while(IsTruthy(Evaluate(stmt.condition)))
+            try
             {
-                Execute(stmt.body);
+                while (IsTruthy(Evaluate(stmt.condition)))
+                    Execute(stmt.body);
             }
+            catch (BreakException ex)
+            { }
+
             return null;
         }
 

@@ -35,7 +35,8 @@ namespace tools
                     "If         : Expr condition, Stmt thenBranch, Stmt? elseBranch",
                     "Var        : Token name, Expr? initializer",
                     "Block      : List<Stmt> statements",
-                    "While      : Expr condition, Stmt body"
+                    "While      : Expr condition, Stmt body",
+                    "Break      : ",
                 }
                 );
         }
@@ -82,8 +83,12 @@ namespace tools
             sw.WriteLine("\t\t\tinternal {0}({1})", className, fieldList);
             sw.WriteLine("\t\t\t{");
 
-            string[] fileds = fieldList.Split(',');
-            foreach (var field in fileds)
+            string[] fields;
+            if (fieldList.Length == 0)
+                fields = Array.Empty<string>();
+            else
+                fields = fieldList.Split(',');
+            foreach (var field in fields)
             {
                 string fieldName = field.Trim().Split(' ')[1];
                 sw.WriteLine("\t\t\t\tthis.{0} = {1};", fieldName, fieldName);
@@ -94,7 +99,7 @@ namespace tools
             sw.WriteLine();
 
             // fields
-            foreach (var field in fileds)
+            foreach (var field in fields)
             {
                 sw.WriteLine("\t\t\tinternal readonly {0};", field.Trim());
             }
