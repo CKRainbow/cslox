@@ -80,5 +80,10 @@ namespace cslox
         {
             throw new NotImplementedException();
         }
+
+        public string VisitCallExpr(Expr.Call expr)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

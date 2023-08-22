@@ -4,9 +4,14 @@
 
     internal class Interpreter : Expr.IVisitor<object?>, Stmt.IVisitor<object?>
     {
-        Environment environment = new();
+        internal readonly Environment globals = new();
+        Environment environment;
 
-        
+        internal Interpreter()
+        {
+            environment = globals;
+            globals.Define("clock", new LoxCallable_Clock());
+        }
 
         internal void Interpret(List<Stmt> statements)
         {
@@ -40,7 +45,7 @@
             stmt.Accept(this);
         }
 
-        void ExecuteBlock(List<Stmt> statements, Environment environment)
+        internal void ExecuteBlock(List<Stmt> statements, Environment environment)
         {
             Environment preEnvironment = this.environment;
 
@@ -56,8 +61,9 @@
             }
         }
 
-        object? Evaluate(Expr expr)
+        object? Evaluate(Expr? expr)
         {
+            if (expr == null) return null;
             return expr.Accept(this);
         }
 
@@ -83,7 +89,7 @@
                     throw new RuntimeError(expr.op, "Operands msut be two numbers or two strings");
                 case TokenType.MINUS:
                     CheckNumberOperands(expr.op, left, right);
-                    return (double)left + (double)right;
+                    return (double)left - (double)right;
                 case TokenType.SLASH:
                     CheckNumberOperands(expr.op, left, right);
                     CheckValidDivide(expr.op, (double)right);
@@ -176,6 +182,36 @@
             return value;
         }
 
+        public object? VisitCallExpr(Expr.Call expr)
+        {
+            object? callee = Evaluate(expr.callee);
+
+            List<object?> arguments = new List<object?>();
+            foreach (Expr arg in expr.arguments)
+                arguments.Add(Evaluate(arg));
+
+            // callee无法被调用
+            if (callee is not ILoxCallable)
+                throw new RuntimeError(expr.paren, "Can only call functions and classes");
+
+            ILoxCallable function = (ILoxCallable)callee;
+
+            // 参数量不一致
+            if (arguments.Count != function.Arity())
+                throw new RuntimeError(expr.paren,
+                    $"Expected {function.Arity()} arguments but got {arguments.Count}.");
+
+            return function.call(this, arguments);
+        }
+
+        public object? VisitReturnStmt(Stmt.Return stmt)
+        {
+            object? value = null;
+            if (stmt.value != null) value = Evaluate(stmt.value);
+
+            throw new Return(value);
+        }
+
         public object? VisitExpressionStmt(Stmt.Expression stmt)
         {
             Evaluate(stmt.expr);
@@ -230,6 +266,13 @@
         public object? VisitBlockStmt(Stmt.Block stmt)
         {
             ExecuteBlock(stmt.statements, new Environment(environment));
+            return null;
+        }
+
+        public object? VisitFunctionStmt(Stmt.Function stmt)
+        {
+            LoxCallable_Function function = new(stmt, environment);
+            environment.Define(stmt.name.lexeme, function);
             return null;
         }
 

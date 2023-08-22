@@ -45,8 +45,8 @@ namespace cslox
 
                 Console.Write("> ");
                 string? line = Console.ReadLine();
-                
-                Scanner scanner = new Scanner(line??"");
+
+                Scanner scanner = new Scanner(line ?? "");
                 List<Token> tokens = scanner.scanTokens();
 
                 Parser parser = new Parser(tokens);
@@ -64,7 +64,7 @@ namespace cslox
                 }
 
 
-                
+
             }
         }
 

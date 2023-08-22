@@ -2,7 +2,7 @@
 
 namespace cslox
 {
-    internal class AstPrinter : Expr.IVisitor<string> , Stmt.IVisitor<string>
+    internal class AstPrinter : Expr.IVisitor<string>, Stmt.IVisitor<string>
     {
         public static void Main(string[] args)
         {
@@ -113,6 +113,21 @@ namespace cslox
         }
 
         public string VisitBreakStmt(Stmt.Break stmt)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitFunctionStmt(Stmt.Function stmt)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitCallExpr(Expr.Call expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitReturnStmt(Stmt.Return stmt)
         {
             throw new NotImplementedException();
         }

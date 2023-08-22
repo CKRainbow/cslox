@@ -32,7 +32,7 @@
         {
             allowExpression = true;
             List<Stmt> statements = new();
-            while(!IsAtEnd())
+            while (!IsAtEnd())
             {
                 statements.Add(Declaration());
 
@@ -51,23 +51,51 @@
         // program -> declaration* EOF
 
 
-        // declaration -> varDecl | statement
+        // declaration -> funcDecl | varDecl | statement
         Stmt Declaration()
         {
             try
             {
                 if (Match(TokenType.VAR)) return VarDeclaration();
 
+                if (Match(TokenType.FUN)) return Function("function");
+
                 return Statement();
             }
-            catch(ParseError ex)
+            catch (ParseError ex)
             {
                 Synchronize();
                 return null;
             }
-            
+
         }
-        
+
+        // funcDecl -> "fun" function
+        // function -> IDENTIFIER "(" parameters? ")" block
+        // parameters -> IDENTIFIER ( "," IDENTIFIER )* 
+        Stmt.Function Function(string kind)
+        {
+            Token name = Consume(TokenType.IDENTIFIER, $"Expect {kind} name");
+
+            Consume(TokenType.LEFT_PAREN, $"Expect '(' after {kind} name");
+
+            List<Token> parameters = new();
+            if (!Check(TokenType.RIGHT_PAREN))
+                do
+                {
+                    if (parameters.Count >= 255)
+                        Error(Peek(), "Cannot have more than 255 parameters");
+                    parameters.Add(Consume(TokenType.IDENTIFIER, $"Expect parameter name"));
+                } while (Match(TokenType.COMMA));
+
+            Consume(TokenType.RIGHT_PAREN, $"Expect ')' after parameters");
+
+            Consume(TokenType.LEFT_BRACE, $"Expect '{{' before {kind} body");
+            List<Stmt> body = Block();
+
+            return new Stmt.Function(name, parameters, body);
+        }
+
 
         // varDecl -> "var" IDENTIFIER ( "=" expression )? ";"
         Stmt VarDeclaration()
@@ -83,7 +111,7 @@
         }
 
 
-        // statement -> exprStmt | printStmt | ifStmt | whileStmt | forStmt | block;
+        // statement -> exprStmt | printStmt | ifStmt | whileStmt | forStmt | returnStmt | block;
         Stmt Statement()
         {
             if (Match(TokenType.PRINT)) return PrintStatment();
@@ -94,15 +122,17 @@
 
             if (Match(TokenType.FOR)) return ForStatement();
 
-            if (Match(TokenType.LEFT_BRACE)) return Block();
+            if (Match(TokenType.LEFT_BRACE)) return new Stmt.Block(Block());
 
             if (Match(TokenType.BREAK)) return BreakStatement();
+
+            if (Match(TokenType.RETURN)) return ReturnStatement();
 
             return ExpressionStatement();
         }
 
         // block -> "{" declaration* "}"
-        Stmt Block()
+        List<Stmt> Block()
         {
             List<Stmt> statements = new();
 
@@ -110,7 +140,7 @@
                 statements.Add(Declaration());
 
             Consume(TokenType.RIGHT_BRACE, "Expect '}' after block");
-            return new Stmt.Block(statements);
+            return statements;
         }
 
         Stmt BreakStatement()
@@ -151,7 +181,7 @@
             Consume(TokenType.LEFT_PAREN, "Expect '(' after if");
             Expr condition = ExpressionExpr();
             Consume(TokenType.RIGHT_PAREN, "Expect ')' after condition");
-            
+
             Stmt thenBranch = Statement();
             Stmt? elseBranch = null;
             if (Match(TokenType.ELSE))
@@ -226,6 +256,19 @@
             {
                 loopDepth--;
             }
+        }
+
+        // returnStmt -> "return" expression? ";"
+        Stmt.Return ReturnStatement()
+        {
+            Token keyword = Previous();
+            Expr? value = null;
+            if (!Check(TokenType.SEMICOLON))
+                value = ExpressionExpr();
+
+            Consume(TokenType.SEMICOLON, $"Expecr ';' after return value");
+
+            return new Stmt.Return(keyword, value);
         }
 
         // expression -> comma
@@ -368,7 +411,7 @@
             return expr;
         }
 
-        // unary -> ( "!" | "-" ) unary | primary
+        // unary -> ( "!" | "-" ) unary | call
         Expr UnaryExpr()
         {
 
@@ -379,7 +422,41 @@
                 return new Expr.Unary(op, expr);
             }
 
-            return PrimaryExpr();
+            return CallExpr();
+        }
+
+        // call -> primary ( "(" arguments? ")" )*
+        Expr CallExpr()
+        {
+            Expr expr = PrimaryExpr();
+
+            while (true)
+            {
+                if (Match(TokenType.LEFT_PAREN))
+                    expr = FinishCallExpr(expr);
+                else
+                    break;
+            }
+
+            return expr;
+        }
+
+        // arguments -> assignment ( "," assignment )*
+        Expr FinishCallExpr(Expr callee)
+        {
+            List<Expr> arguments = new List<Expr>();
+            if (!Check(TokenType.RIGHT_PAREN))
+                do
+                {
+                    // 报错但不抛出
+                    if (arguments.Count >= 255)
+                        Error(Peek(), "Cannot have more than 255 arguments");
+                    arguments.Add(AssignmentExpr());
+                } while (Match(TokenType.COMMA));
+
+            Token paren = Consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments");
+
+            return new Expr.Call(callee, paren, arguments);
         }
 
         // primary -> NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER

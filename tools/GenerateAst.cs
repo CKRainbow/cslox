@@ -23,7 +23,8 @@ namespace tools
                     "Grouping  : Expr expr",
                     "Literal   : object? value",
                     "Unary     : Token op, Expr right",
-                    "Variable  : Token name"
+                    "Variable  : Token name",
+                    "Call      : Expr callee, Token paren, List<Expr> arguments"
                 }
                 );
 
@@ -37,6 +38,8 @@ namespace tools
                     "Block      : List<Stmt> statements",
                     "While      : Expr condition, Stmt body",
                     "Break      : ",
+                    "Function   : Token name, List<Token> parameters, List<Stmt> body",
+                    "Return     : Token keyword, Expr? value"
                 }
                 );
         }
