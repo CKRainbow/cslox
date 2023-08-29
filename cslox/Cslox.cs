@@ -78,6 +78,12 @@ namespace cslox
 
             if (hasError || statements.Count == 0) return;
 
+            Resolver resolver = new(interpreter);
+            resolver.Resolve(statements);
+
+            //解析错误则停止继续执行
+            if (hasError) return;
+
             interpreter.Interpret(statements);
         }
 

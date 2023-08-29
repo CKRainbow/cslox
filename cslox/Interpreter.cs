@@ -6,6 +6,8 @@
     {
         internal readonly Environment globals = new();
         Environment environment;
+        //无须嵌套：Expr唯一
+        readonly Dictionary<Expr, int> locals = new();
 
         internal Interpreter()
         {
@@ -65,6 +67,19 @@
         {
             if (expr == null) return null;
             return expr.Accept(this);
+        }
+
+        internal void Resolve(Expr expr, int depth)
+        {
+            locals.Add(expr, depth);
+        }
+
+        object? LookUpVariable(Token name, Expr expr)
+        {
+            if (locals.TryGetValue(expr, out int distance))
+                return environment.GetAt(distance, name.lexeme);
+            else
+                return globals.Get(name);
         }
 
         public object? VisitBinaryExpr(Expr.Binary expr)
@@ -172,13 +187,17 @@
 
         public object? VisitVariableExpr(Expr.Variable expr)
         {
-            return environment.Get(expr.name);
+            return LookUpVariable(expr.name, expr);
         }
 
         public object? VisitAssignExpr(Expr.Assign expr)
         {
             object? value = Evaluate(expr.value);
-            environment.Assign(expr.name, value);
+            if (locals.TryGetValue(expr, out int distance))
+                environment.AssignAt(distance, expr.name.lexeme, value);
+            else
+                globals.Assign(expr.name, value);
+
             return value;
         }
 
