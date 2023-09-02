@@ -8,9 +8,30 @@ namespace cslox
 {
     internal class Resolver : Expr.IVisitor<object?>, Stmt.IVisitor<object?>
     {
+        class Variable
+        {
+            internal readonly Token name;
+            internal VariableState state;
+        
+            internal Variable(Token name, VariableState state)
+            {
+                this.name = name;
+                this.state = state;
+            }
+        }
+
+        enum VariableState
+        {
+            DECLARED,
+            DEFINED,
+            READ,
+        }
+
         readonly Interpreter interpreter;
 
-        readonly List<Dictionary<string, bool>> scopes = new();
+        readonly List<Dictionary<string, Variable>> scopes = new();
+
+        readonly HashSet<Expr> unusedVariables = new();
 
         FunctionType currentFunction = FunctionType.NONE; 
 
@@ -43,14 +64,15 @@ namespace cslox
             expr.Accept(this);
         }
 
-        void ResolveLocal(Expr expr, Token name)
+        void ResolveLocal(Expr expr, Token name, bool isRead)
         {
             for (int i = scopes.Count - 1; i >= 0; i--)
             {
                 if (scopes[i].ContainsKey(name.lexeme))
                 {
                     interpreter.Resolve(expr, scopes.Count - 1 - i);
-                    return;
+                    if (isRead)
+                        scopes.Last()[name.lexeme] = new Variable(name, VariableState.READ);      
                 }
             }
         }
@@ -74,12 +96,19 @@ namespace cslox
 
         void BeginScope()
         {
-            scopes.Append(new Dictionary<string, bool>());
+            scopes.Add(new Dictionary<string, Variable>());
         }
 
         void EndScope()
         {
-            scopes.Last();
+            var scope = scopes[scopes.Count-1];
+            scopes.Remove(scope);
+
+            foreach(var pair in scope)
+            {
+                if (pair.Value.state == VariableState.DEFINED)
+                    Cslox.Error(pair.Value.name, "Local variable is not read");
+            }
         }
 
         void Declare(Token name)
@@ -87,13 +116,13 @@ namespace cslox
             if (scopes.Count == 0)
                 return;
 
-            Dictionary<string, bool> scope = scopes.Last();
+            Dictionary<string, Variable> scope = scopes.Last();
 
             if (scope.ContainsKey(name.lexeme))
                 Cslox.Error(name, "Already declared variable with this name in this scope");
 
             //false 指该变量尚未就绪（是否已经结束了对变量初始化式的解析）
-            scope.Add(name.lexeme, false);
+            scope[name.lexeme] = new Variable(name, VariableState.DECLARED);
         }
 
         void Define(Token name)
@@ -102,13 +131,13 @@ namespace cslox
                 return;
 
             //已完全初始化并可用
-            scopes.Last().Add(name.lexeme, true);
+            scopes.Last()[name.lexeme] = new Variable(name, VariableState.DEFINED);
         }
 
         public object? VisitAssignExpr(Expr.Assign expr)
         {
             Resolve(expr);
-            ResolveLocal(expr, expr.name);
+            ResolveLocal(expr, expr.name, false);
             return null;
         }
 
@@ -218,12 +247,12 @@ namespace cslox
         public object? VisitVariableExpr(Expr.Variable expr)
         {
             //变量是否在其自身的初始化式中被访问
-            if (scopes.Count > 0 && scopes.Last().TryGetValue(expr.name.lexeme, out bool init) && init == false) 
+            if (scopes.Count > 0 && scopes.Last().TryGetValue(expr.name.lexeme, out Variable? variable) && variable?.state == VariableState.DECLARED) 
             {
                 Cslox.Error(expr.name, "Cannot read local variable in its own initializer");
             }
 
-            ResolveLocal(expr, expr.name);
+            ResolveLocal(expr, expr.name, true);
             return null;
         }
 
