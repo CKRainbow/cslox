@@ -220,7 +220,36 @@
                 throw new RuntimeError(expr.paren,
                     $"Expected {function.Arity()} arguments but got {arguments.Count}.");
 
-            return function.call(this, arguments);
+            return function.Call(this, arguments);
+        }
+
+
+        public object? VisitGetExpr(Expr.Get expr)
+        {
+            object? _object = Evaluate(expr._object);
+            if (_object is LoxInstance)
+                return ((LoxInstance)_object).Get(expr.name);
+
+            throw new RuntimeError(expr.name, "Only instances have properties");
+        }
+
+
+        public object? VisitSetExpr(Expr.Set expr)
+        {
+            object? _object = Evaluate(expr._object);
+
+            if (_object is not LoxInstance)
+                throw new RuntimeError(expr.name, "Only instances have fields");
+
+            object? value = Evaluate(expr.value);
+            ((LoxInstance)_object).Set(expr.name, value);
+            return value;
+        }
+
+
+        public object? VisitThisExpr(Expr.This expr)
+        {
+            return LookUpVariable(expr.keyword, expr);
         }
 
         public object? VisitReturnStmt(Stmt.Return stmt)
@@ -290,8 +319,24 @@
 
         public object? VisitFunctionStmt(Stmt.Function stmt)
         {
-            LoxCallable_Function function = new(stmt, environment);
+            LoxCallable_Function function = new(stmt, environment, false);
             environment.Define(stmt.name.lexeme, function);
+            return null;
+        }
+
+        public object? VisitClassStmt(Stmt.Class stmt)
+        {
+            environment.Define(stmt.name.lexeme, null);
+
+            Dictionary<string, LoxCallable_Function> methods = new();
+            foreach (var method in stmt.methods)
+            {
+                LoxCallable_Function function = new(method, environment, method.name.lexeme == "init");
+                methods[method.name.lexeme] = function;
+            }
+                
+            LoxClass klass = new(stmt.name.lexeme, methods);
+            environment.Assign(stmt.name, klass);
             return null;
         }
 
@@ -345,5 +390,6 @@
 
             return value.ToString() ?? "";
         }
+
     }
 }

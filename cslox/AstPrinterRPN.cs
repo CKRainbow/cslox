@@ -85,5 +85,20 @@ namespace cslox
         {
             throw new NotImplementedException();
         }
+
+        public string VisitGetExpr(Expr.Get expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitSetExpr(Expr.Set expr)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string VisitThisExpr(Expr.This expr)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

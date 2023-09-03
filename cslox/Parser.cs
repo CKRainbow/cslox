@@ -51,12 +51,14 @@
         // program -> declaration* EOF
 
 
-        // declaration -> funcDecl | varDecl | statement
+        // declaration -> funcDecl | varDecl | classDecl | statement
         Stmt Declaration()
         {
             try
             {
                 if (Match(TokenType.VAR)) return VarDeclaration();
+
+                if (Match(TokenType.CLASS)) return ClassDeclaration();
 
                 if (Match(TokenType.FUN)) return Function("function");
 
@@ -108,6 +110,23 @@
             Consume(TokenType.SEMICOLON, "Expect ';' after variable declaration");
 
             return new Stmt.Var(name, initializer);
+        }
+
+        // classDecl -> "class" IDENTIFIER "{" function* "}"
+        // 可以自由地向其中加入字段，而非预先定义
+        Stmt ClassDeclaration()
+        {
+            Token name = Consume(TokenType.IDENTIFIER, "Expect class name");
+
+            Consume(TokenType.LEFT_BRACE, "Expect '{' before class body");
+
+            List<Stmt.Function> methods = new();
+            while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
+                methods.Add(Function("method"));
+
+            Consume(TokenType.RIGHT_BRACE, "Expect '}' after class body");
+
+            return new Stmt.Class(name, methods);
         }
 
 
@@ -290,7 +309,7 @@
             return expr;
         }
 
-        // assignment -> IDENTIFIER "=" assignment | conditional
+        // assignment -> ( call "." )? IDENTIFIER "=" assignment | conditional
         Expr AssignmentExpr()
         {
             Expr expr = ConditionalExpr();
@@ -304,6 +323,12 @@
                 {
                     Token name = ((Expr.Variable)expr).name;
                     return new Expr.Assign(name, value);
+                }
+                else if (expr is Expr.Get)
+                {
+                    Expr.Get get = (Expr.Get)expr;
+                    //将最后一层get替换为set
+                    return new Expr.Set(get._object, get.name, value);
                 }
 
                 Error(equals, "Invalid assignment target");
@@ -425,7 +450,7 @@
             return CallExpr();
         }
 
-        // call -> primary ( "(" arguments? ")" )*
+        // call -> primary ( "(" arguments? ")" | "." INDENTIFIER )*
         Expr CallExpr()
         {
             Expr expr = PrimaryExpr();
@@ -434,6 +459,11 @@
             {
                 if (Match(TokenType.LEFT_PAREN))
                     expr = FinishCallExpr(expr);
+                else if (Match(TokenType.DOT))
+                {
+                    Token name = Consume(TokenType.IDENTIFIER, "Expect property name after '.'");
+                    expr = new Expr.Get(expr, name);
+                }    
                 else
                     break;
             }
@@ -467,6 +497,7 @@
             if (Match(TokenType.FALSE)) return new Expr.Literal(false);
             if (Match(TokenType.TRUE)) return new Expr.Literal(true);
             if (Match(TokenType.NIL)) return new Expr.Literal(null);
+            if (Match(TokenType.THIS)) return new Expr.This(Previous());
 
             if (Match(TokenType.NUMBER, TokenType.STRING))
                 return new Expr.Literal(Previous().literal);

@@ -33,7 +33,9 @@ namespace cslox
 
         readonly HashSet<Expr> unusedVariables = new();
 
-        FunctionType currentFunction = FunctionType.NONE; 
+        FunctionType currentFunction = FunctionType.NONE;
+
+        ClassType currentClass = ClassType.NONE;
 
         internal Resolver(Interpreter interpreter)
         {
@@ -43,7 +45,15 @@ namespace cslox
         enum FunctionType
         {
             NONE,
-            FUNCTION
+            FUNCTION,
+            METHOD,
+            INITIALIZER,
+        }
+
+        enum ClassType
+        {
+            NONE,
+            CLASS,
         }
 
         internal void Resolve(List<Stmt> statements)
@@ -234,7 +244,12 @@ namespace cslox
             if (currentFunction == FunctionType.NONE)
                 Cslox.Error(stmt.keyword, "Cannot return from top-level code");
             if (stmt.value != null)
+            {
+                if (currentFunction == FunctionType.INITIALIZER)
+                    Cslox.Error(stmt.keyword, "Canont return a value from an initializer");
                 Resolve(stmt.value);
+            }
+                
             return null;
         }
 
@@ -273,6 +288,49 @@ namespace cslox
         {
             Resolve(stmt.condition);
             Resolve(stmt.body);
+            return null;
+        }
+
+        public object? VisitClassStmt(Stmt.Class stmt)
+        {
+            ClassType enclosingClass = currentClass;
+            currentClass = ClassType.CLASS;
+            Declare(stmt.name);
+            Define(stmt.name);
+            BeginScope();
+            //token应该用什么？
+            scopes.Last()["this"] = new(stmt.name, VariableState.READ);
+            foreach(var method in stmt.methods)
+            {
+                FunctionType declaration = FunctionType.METHOD;
+                if (method.name.lexeme == "init")
+                    declaration = FunctionType.INITIALIZER;
+                ResolveFunction(method, declaration);
+            }
+            EndScope();
+            currentClass = enclosingClass;
+            return null;
+        }
+
+        public object? VisitGetExpr(Expr.Get expr)
+        {
+            //字段属性为动态查找
+            Resolve(expr._object);
+            return null;
+        }
+
+        public object? VisitSetExpr(Expr.Set expr)
+        {
+            Resolve(expr.value);
+            Resolve(expr._object);
+            return null;
+        }
+
+        public object? VisitThisExpr(Expr.This expr)
+        {
+            if (currentClass == ClassType.NONE)
+                Cslox.Error(expr.keyword, "Cannot use 'this' outside of a class");
+            ResolveLocal(expr, expr.keyword, true);
             return null;
         }
     }

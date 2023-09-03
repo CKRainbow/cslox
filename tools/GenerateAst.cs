@@ -24,7 +24,10 @@ namespace tools
                     "Literal   : object? value",
                     "Unary     : Token op, Expr right",
                     "Variable  : Token name",
-                    "Call      : Expr callee, Token paren, List<Expr> arguments"
+                    "Call      : Expr callee, Token paren, List<Expr> arguments",
+                    "Get       : Expr _object, Token name",
+                    "Set       : Expr _object, Token name, Expr value",
+                    "This      : Token keyword",
                 }
                 );
 
@@ -39,7 +42,8 @@ namespace tools
                     "While      : Expr condition, Stmt body",
                     "Break      : ",
                     "Function   : Token name, List<Token> parameters, List<Stmt> body",
-                    "Return     : Token keyword, Expr? value"
+                    "Return     : Token keyword, Expr? value",
+                    "Class      : Token name, List<Stmt.Function> methods",
                 }
                 );
         }
