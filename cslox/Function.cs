@@ -20,12 +20,13 @@
             return declaration.parameters.Count;
         }
 
-        public object? Call(Interpreter interpreter, List<object?> arguments)
+        public object? Call(Interpreter interpreter, List<object?>? arguments)
         {
             Environment environment = new Environment(enclosure);
-            for (int i = 0; i < arguments.Count; i++)
+            if (declaration.parameters != null)
             {
-                environment.Define(declaration.parameters[i].lexeme, arguments[i]);
+                for (int i = 0; i < arguments?.Count; i++)
+                    environment.Define(declaration.parameters[i].lexeme, arguments[i]);
             }
             try
             {
@@ -48,6 +49,11 @@
             Environment env = new(enclosure);
             env.Define("this", instance);
             return new LoxCallable_Function(declaration, env, isInitializer);
+        }
+
+        internal bool IsGetter()
+        {
+            return declaration.parameters == null;
         }
 
         public override string ToString()

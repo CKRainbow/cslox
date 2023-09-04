@@ -132,7 +132,7 @@
 
 		internal class Function : Stmt
 		{
-			internal Function(Token name, List<Token> parameters, List<Stmt> body)
+			internal Function(Token name, List<Token>? parameters, List<Stmt> body)
 			{
 				this.name = name;
 				this.parameters = parameters;
@@ -140,7 +140,7 @@
 			}
 
 			internal readonly Token name;
-			internal readonly List<Token> parameters;
+			internal readonly List<Token>? parameters;
 			internal readonly List<Stmt> body;
 
 			internal override T Accept<T>(IVisitor<T> visitor)
@@ -168,14 +168,16 @@
 
 		internal class Class : Stmt
 		{
-			internal Class(Token name, List<Stmt.Function> methods)
+			internal Class(Token name, List<Stmt.Function> methods, List<Stmt.Function> staticMethods)
 			{
 				this.name = name;
 				this.methods = methods;
+				this.staticMethods = staticMethods;
 			}
 
 			internal readonly Token name;
 			internal readonly List<Stmt.Function> methods;
+			internal readonly List<Stmt.Function> staticMethods;
 
 			internal override T Accept<T>(IVisitor<T> visitor)
 			{

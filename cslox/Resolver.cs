@@ -91,13 +91,16 @@ namespace cslox
         {
             FunctionType enclosingFunction = currentFunction;
             currentFunction = type;
-            BeginScope();
-            foreach (Token param in function.parameters)
-            {
-                Declare(param);
-                Define(param);
-            }
 
+            BeginScope();
+            if (function.parameters != null)
+            {
+                foreach (Token param in function.parameters)
+                {
+                    Declare(param);
+                    Define(param);
+                }
+            }
             //静态分析中立刻遍历函数体
             Resolve(function.body);
             EndScope();
@@ -306,6 +309,13 @@ namespace cslox
                 if (method.name.lexeme == "init")
                     declaration = FunctionType.INITIALIZER;
                 ResolveFunction(method, declaration);
+            }
+            foreach(var staticMethod in stmt.staticMethods)
+            {
+                BeginScope();
+                scopes.Last()["this"] = new(stmt.name, VariableState.READ);
+                ResolveFunction(staticMethod, FunctionType.METHOD);
+                EndScope();
             }
             EndScope();
             currentClass = enclosingClass;

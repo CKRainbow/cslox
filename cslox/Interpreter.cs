@@ -71,7 +71,7 @@
 
         internal void Resolve(Expr expr, int depth)
         {
-            locals.Add(expr, depth);
+            locals[expr] = depth;
         }
 
         object? LookUpVariable(Token name, Expr expr)
@@ -228,7 +228,13 @@
         {
             object? _object = Evaluate(expr._object);
             if (_object is LoxInstance)
-                return ((LoxInstance)_object).Get(expr.name);
+            {
+                object? result = ((LoxInstance)_object).Get(expr.name);
+                if (result is LoxCallable_Function && ((LoxCallable_Function) result).IsGetter())
+                    result = ((LoxCallable_Function)result).Call(this, null);
+
+                return result;
+            }
 
             throw new RuntimeError(expr.name, "Only instances have properties");
         }
@@ -329,13 +335,21 @@
             environment.Define(stmt.name.lexeme, null);
 
             Dictionary<string, LoxCallable_Function> methods = new();
+            foreach (var staticMethod in stmt.staticMethods)
+            {
+                LoxCallable_Function function = new(staticMethod, environment, false);
+                methods[staticMethod.name.lexeme] = function;
+            }
+
+            LoxClass metaClass = new(null, stmt.name.lexeme, methods);
+
             foreach (var method in stmt.methods)
             {
                 LoxCallable_Function function = new(method, environment, method.name.lexeme == "init");
                 methods[method.name.lexeme] = function;
             }
                 
-            LoxClass klass = new(stmt.name.lexeme, methods);
+            LoxClass klass = new(metaClass, stmt.name.lexeme, methods);
             environment.Assign(stmt.name, klass);
             return null;
         }

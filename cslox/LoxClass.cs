@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace cslox
 {
-    internal class LoxClass : ILoxCallable
+    internal class LoxClass : LoxInstance, ILoxCallable
     {
         readonly string name;
 
         readonly Dictionary<string, LoxCallable_Function> methods;
 
-        internal LoxClass(string name, Dictionary<string, LoxCallable_Function> methods)
+        internal LoxClass(LoxClass metaClass, string name, Dictionary<string, LoxCallable_Function> methods) : base(metaClass)
         {
             this.name = name;
             this.methods = methods;

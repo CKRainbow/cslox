@@ -41,9 +41,9 @@ namespace tools
                     "Block      : List<Stmt> statements",
                     "While      : Expr condition, Stmt body",
                     "Break      : ",
-                    "Function   : Token name, List<Token> parameters, List<Stmt> body",
+                    "Function   : Token name, List<Token>? parameters, List<Stmt> body",
                     "Return     : Token keyword, Expr? value",
-                    "Class      : Token name, List<Stmt.Function> methods",
+                    "Class      : Token name, List<Stmt.Function> methods, List<Stmt.Function> staticMethods",
                 }
                 );
         }

@@ -74,23 +74,30 @@
 
         // funcDecl -> "fun" function
         // function -> IDENTIFIER "(" parameters? ")" block
+        // getter   -> IDENTIFIER block
         // parameters -> IDENTIFIER ( "," IDENTIFIER )* 
         Stmt.Function Function(string kind)
         {
             Token name = Consume(TokenType.IDENTIFIER, $"Expect {kind} name");
 
-            Consume(TokenType.LEFT_PAREN, $"Expect '(' after {kind} name");
+            List<Token>? parameters = null;
 
-            List<Token> parameters = new();
-            if (!Check(TokenType.RIGHT_PAREN))
-                do
-                {
-                    if (parameters.Count >= 255)
-                        Error(Peek(), "Cannot have more than 255 parameters");
-                    parameters.Add(Consume(TokenType.IDENTIFIER, $"Expect parameter name"));
-                } while (Match(TokenType.COMMA));
+            //如果是方法，则不必须要求 "(" parameters? ")" 部分
+            if (kind != "method" || Check(TokenType.LEFT_PAREN))
+            {
+                Consume(TokenType.LEFT_PAREN, $"Expect '(' after {kind} name");
+                parameters = new List<Token>();
 
-            Consume(TokenType.RIGHT_PAREN, $"Expect ')' after parameters");
+                if (!Check(TokenType.RIGHT_PAREN))
+                    do
+                    {
+                        if (parameters.Count >= 255)
+                            Error(Peek(), "Cannot have more than 255 parameters");
+                        parameters.Add(Consume(TokenType.IDENTIFIER, $"Expect parameter name"));
+                    } while (Match(TokenType.COMMA));
+
+                Consume(TokenType.RIGHT_PAREN, $"Expect ')' after parameters");
+            }
 
             Consume(TokenType.LEFT_BRACE, $"Expect '{{' before {kind} body");
             List<Stmt> body = Block();
@@ -112,7 +119,7 @@
             return new Stmt.Var(name, initializer);
         }
 
-        // classDecl -> "class" IDENTIFIER "{" function* "}"
+        // classDecl -> "class" IDENTIFIER "{" ( "class"? function)* "}"
         // 可以自由地向其中加入字段，而非预先定义
         Stmt ClassDeclaration()
         {
@@ -121,12 +128,18 @@
             Consume(TokenType.LEFT_BRACE, "Expect '{' before class body");
 
             List<Stmt.Function> methods = new();
+            List<Stmt.Function> staticMethods = new();
             while (!Check(TokenType.RIGHT_BRACE) && !IsAtEnd())
-                methods.Add(Function("method"));
+            {
+                if (Match(TokenType.CLASS))
+                    staticMethods.Add(Function("method"));
+                else
+                    methods.Add(Function("method"));
+            }
 
             Consume(TokenType.RIGHT_BRACE, "Expect '}' after class body");
 
-            return new Stmt.Class(name, methods);
+            return new Stmt.Class(name, methods, staticMethods);
         }
 
 
